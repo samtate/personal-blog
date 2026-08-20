@@ -24,6 +24,7 @@ jobs:
       DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
       DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
       DEPLOY_HOST_ED25519_SHA256: SHA256:CPpDJF7szLXVJJ15Qzakr0llRD8HBcGoHFqlzPti9Qg
+      DEPLOY_KEY_ED25519_SHA256: SHA256:QxkinsBKeKUhMUhwJ7xhR4jmX45WRh7m7H6phcQmRfo
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -62,6 +63,8 @@ jobs:
           install -m 700 -d ~/.ssh
           install -m 600 /dev/null ~/.ssh/id_ed25519
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          key_fingerprint="$(ssh-keygen -y -f ~/.ssh/id_ed25519 | ssh-keygen -lf - -E sha256 | awk '{print $2; exit}')"
+          test "$key_fingerprint" = "$DEPLOY_KEY_ED25519_SHA256"
           scan_path="$(mktemp)"
           trap 'rm -f "$scan_path"' EXIT
           ssh-keyscan -T 10 -p "$DEPLOY_PORT" -t ed25519 "$DEPLOY_HOST" > "$scan_path" 2>/dev/null
@@ -73,5 +76,5 @@ jobs:
         run: |
           port="${DEPLOY_PORT:-22}"
           rsync -az --delete --delay-updates \
-            -e "ssh -p $port -o UserKnownHostsFile=$HOME/.ssh/known_hosts -o StrictHostKeyChecking=yes" \
+            -e "ssh -i $HOME/.ssh/id_ed25519 -o IdentitiesOnly=yes -p $port -o UserKnownHostsFile=$HOME/.ssh/known_hosts -o StrictHostKeyChecking=yes" \
             dist/ "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"

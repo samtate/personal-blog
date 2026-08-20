@@ -67,7 +67,7 @@ jobs:
 
       - name: Inspect deployment host key
         run: |
-          ssh-keyscan -T 10 -p "$DEPLOY_PORT" "$DEPLOY_HOST" 2>/dev/null | ssh-keygen -lf - || true
+          ssh-keyscan -T 10 -p "$DEPLOY_PORT" "$DEPLOY_HOST" 2>/dev/null
 
       - name: Deploy generated files
         run: |

@@ -65,15 +65,9 @@ jobs:
           test -n "$DEPLOY_PATH"
           test "$DEPLOY_PATH" != "/"
 
-      - name: Inspect deployment host key
-        run: |
-          ssh-keygen -F "$DEPLOY_HOST" -f ~/.ssh/known_hosts || true
-          ssh-keygen -F "[$DEPLOY_HOST]:$DEPLOY_PORT" -f ~/.ssh/known_hosts || true
-          ssh-keyscan -T 10 -p "$DEPLOY_PORT" "$DEPLOY_HOST" 2>/dev/null
-
       - name: Deploy generated files
         run: |
           port="${DEPLOY_PORT:-22}"
           rsync -az --delete --delay-updates \
-            -e "ssh -p $port" \
+            -e "ssh -p $port -o UserKnownHostsFile=$HOME/.ssh/known_hosts -o StrictHostKeyChecking=yes" \
             dist/ "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"

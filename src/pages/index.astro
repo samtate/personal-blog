@@ -1,0 +1,71 @@
+---
+import { getCollection } from 'astro:content';
+import PostList from '../components/PostList.astro';
+import { SITE_DESCRIPTION } from '../consts';
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const posts = (await getCollection('posts', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.published.valueOf() - a.data.published.valueOf(),
+);
+---
+
+<BaseLayout>
+  <section class="terminal-window home-terminal">
+    <div class="window-bar" aria-hidden="true">
+      <span class="window-dots"><i></i><i></i><i></i></span>
+      <span>samtate@localhost: ~/writing</span>
+      <span></span>
+    </div>
+    <div class="intro-content">
+      <p class="eyebrow">Personal blog</p>
+      <h1>Notes from Sam.</h1>
+      <p class="intro-copy">{SITE_DESCRIPTION}</p>
+    </div>
+    <section class="writing-section" aria-labelledby="writing-heading">
+      <div class="section-heading">
+        <p id="writing-heading" class="terminal-command"><span class="prompt">$</span> ls ./posts</p>
+        <span class="result-count">{posts.length} {posts.length === 1 ? 'post' : 'posts'}</span>
+      </div>
+      <PostList {posts} />
+    </section>
+  </section>
+  <script is:inline>
+    (() => {
+      const terminal = document.querySelector('.home-terminal');
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+      let frame;
+      let origin = performance.now();
+
+      const move = (now) => {
+        if (!terminal || reducedMotion.matches) return;
+
+        const t = (now - origin) / 1000;
+        const x = Math.sin(t * 0.37) * 1.4 + Math.sin(t * 0.17 + 1.8) * 0.8;
+        const y = Math.sin(t * 0.29 + 0.6) * 3.2 + Math.sin(t * 0.11) * 1.8;
+        const z = Math.sin(t * 0.23 + 2.1) * 7 + Math.sin(t * 0.13) * 4;
+        const rotateX = Math.sin(t * 0.31 + 0.4) * 0.9 + Math.sin(t * 0.14) * 0.55;
+        const rotateY = Math.sin(t * 0.27 + 1.7) * 1.05 + Math.sin(t * 0.12) * 0.5;
+        const rotateZ = Math.sin(t * 0.19 + 0.9) * 0.11;
+
+        terminal.style.transform =
+          `translate3d(${x}px, ${y}px, ${z}px) ` +
+          `rotateX(${rotateX}deg) rotateY(${rotateY}deg) rotateZ(${rotateZ}deg)`;
+        frame = requestAnimationFrame(move);
+      };
+
+      const syncMotion = () => {
+        cancelAnimationFrame(frame);
+        if (!terminal) return;
+        if (reducedMotion.matches) {
+          terminal.style.transform = 'none';
+          return;
+        }
+        origin = performance.now();
+        frame = requestAnimationFrame(move);
+      };
+
+      reducedMotion.addEventListener('change', syncMotion);
+      syncMotion();
+    })();
+  </script>
+</BaseLayout>

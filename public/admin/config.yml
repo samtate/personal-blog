@@ -1,0 +1,52 @@
+# yaml-language-server: $schema=https://unpkg.com/@sveltia/cms/schema/sveltia-cms.json
+
+backend:
+  name: github
+  repo: YOUR_GITHUB_USERNAME/personal-blog
+  branch: main
+  auth_methods: [token]
+
+media_folder: /public/uploads
+public_folder: /uploads
+
+slug:
+  encoding: ascii
+  clean_accents: true
+
+output:
+  omit_empty_optional_fields: true
+
+collections:
+  - name: posts
+    label: Writing
+    label_singular: Post
+    icon: edit_note
+    folder: /src/content/posts
+    path: '{{slug}}/index'
+    media_folder: ''
+    public_folder: ''
+    create: true
+    delete: true
+    summary: '{{title}} — {{published | date("D MMM YYYY")}}'
+    sortable_fields: [title, published]
+    fields:
+      - { name: title, label: Title, widget: string }
+      - { name: description, label: Summary, widget: text }
+      - { name: hero, label: Hero image, widget: image, required: false, hint: Optional image shown in the article header }
+      - { name: heroAlt, label: Hero image description, widget: string, required: false, hint: Describe the image for readers using assistive technology }
+      - name: heroPosition
+        label: Hero image position
+        widget: select
+        default: right
+        options:
+          - { label: Right of text, value: right }
+          - { label: Below text, value: below }
+      - { name: published, label: Published, widget: datetime, time_format: false }
+      - { name: updated, label: Updated, widget: datetime, time_format: false, required: false }
+      - { name: tags, label: Tags, widget: list, required: false, default: [] }
+      - { name: draft, label: Draft, widget: boolean, default: true }
+      - name: body
+        label: Body
+        widget: richtext
+        hint: Quote blocks are displayed as pull quotes beside the article text on desktop.
+        modes: [rich_text, raw]

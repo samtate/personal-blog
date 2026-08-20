@@ -1,0 +1,51 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { Image } from 'astro:assets';
+import { postSlug } from '../consts';
+
+interface Props {
+  posts: CollectionEntry<'posts'>[];
+}
+
+const { posts } = Astro.props;
+const dateFormat = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+});
+---
+
+<ol class="post-list">
+  {posts.map((post, index) => (
+    <li>
+      <span class="post-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+      <article class="post-card">
+        <div class="post-card-body">
+          <div class="post-card-topline">
+            <p class="post-meta">
+              <time datetime={post.data.published.toISOString()}>
+                {dateFormat.format(post.data.published)}
+              </time>
+            </p>
+            <span class="file-type" aria-hidden="true">.md</span>
+          </div>
+          <h2><a href={`/posts/${postSlug(post.id)}/`}>{post.data.title}<span aria-hidden="true"> →</span></a></h2>
+          <p>{post.data.description}</p>
+          <div class="post-card-footer">
+            {post.data.tags.length > 0 && (
+              <ul class="tag-list" aria-label="Tags">
+                {post.data.tags.map((tag) => <li>#{tag}</li>)}
+              </ul>
+            )}
+            <a class="read-link" href={`/posts/${postSlug(post.id)}/`} aria-label={`Read ${post.data.title}`}>Read →</a>
+          </div>
+        </div>
+        {post.data.hero && (
+          <a class="post-card-thumb" href={`/posts/${postSlug(post.id)}/`} aria-label={`Read ${post.data.title}`}>
+            <Image src={post.data.hero} alt="" widths={[160, 240]} sizes="(min-width: 720px) 12rem, 30vw" loading="lazy" />
+          </a>
+        )}
+      </article>
+    </li>
+  ))}
+</ol>

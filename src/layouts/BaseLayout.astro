@@ -1,0 +1,100 @@
+---
+import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = SITE_TITLE,
+  description = SITE_DESCRIPTION,
+} = Astro.props;
+const pageTitle = title === SITE_TITLE ? title : `${title} · ${SITE_TITLE}`;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>{pageTitle}</title>
+    <script is:inline>
+      (() => {
+        const saved = localStorage.getItem('samtate-theme');
+        document.documentElement.dataset.theme = saved === 'light' ? 'light' : 'dark';
+      })();
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="site-shell">
+      <header class="site-header">
+        <a class="wordmark" href="/" aria-label={`${SITE_TITLE} home`}>
+          <span aria-hidden="true">&gt;</span>{SITE_TITLE}<span class="cursor" aria-hidden="true"></span>
+        </a>
+        <nav aria-label="Main navigation">
+          <a href="/"><span aria-hidden="true">01.</span> writing</a>
+          <a href="/about/"><span aria-hidden="true">02.</span> about</a>
+          <button class="theme-toggle" type="button" aria-label="Switch to light mode">
+            <span aria-hidden="true">[</span><span data-theme-label>dark</span><span aria-hidden="true">]</span>
+          </button>
+        </nav>
+      </header>
+      <div class="system-strip" aria-hidden="true">
+        <span class="online-state"><i></i> online</span>
+        <span>render: static</span>
+        <span>content: markdown</span>
+        <span data-local-clock>--:--:-- Europe/London</span>
+      </div>
+    </div>
+    <main id="main">
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <p>Built with Astro. No tracking.</p>
+      <a href="#main">Back to top ↑</a>
+    </footer>
+    <script is:inline>
+      const toggle = document.querySelector('.theme-toggle');
+      const label = toggle?.querySelector('[data-theme-label]');
+
+      const syncThemeControl = () => {
+        const theme = document.documentElement.dataset.theme ?? 'dark';
+        if (label) label.textContent = theme;
+        toggle?.setAttribute(
+          'aria-label',
+          `Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`,
+        );
+      };
+
+      syncThemeControl();
+      toggle?.addEventListener('click', () => {
+        const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = next;
+        localStorage.setItem('samtate-theme', next);
+        syncThemeControl();
+      });
+
+      const clock = document.querySelector('[data-local-clock]');
+      const clockFormat = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/London',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      });
+      const updateClock = () => {
+        if (clock) clock.textContent = `${clockFormat.format(new Date())} Europe/London`;
+      };
+      updateClock();
+      setInterval(updateClock, 1000);
+    </script>
+  </body>
+</html>

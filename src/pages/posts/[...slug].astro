@@ -1,0 +1,219 @@
+---
+import { getCollection, render, type CollectionEntry } from 'astro:content';
+import { Image, getImage } from 'astro:assets';
+import { postSlug } from '../../consts';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('posts', ({ data }) => !data.draft);
+  return posts.map((post) => ({
+    params: { slug: postSlug(post.id) },
+    props: { post },
+  }));
+}
+
+interface Props {
+  post: CollectionEntry<'posts'>;
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+const slug = postSlug(post.id);
+const heroLightbox = post.data.hero
+  ? await getImage({
+      src: post.data.hero,
+      width: Math.min(post.data.hero.width, 1600),
+      format: 'webp',
+    })
+  : undefined;
+const dateFormat = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+});
+const oneYearAgo = new Date();
+oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+const isOlderThanYear = post.data.published < oneYearAgo;
+---
+
+<BaseLayout title={post.data.title} description={post.data.description}>
+  <article class="post">
+    <header class="post-header post-terminal">
+      <div class="window-bar" aria-hidden="true">
+        <span class="window-dots"><i></i><i></i><i></i></span>
+        <span>{`samtate@localhost: ~/posts/${slug}.md`}</span>
+        <span></span>
+      </div>
+      <div class:list={['post-header-body', post.data.hero && `hero-${post.data.heroPosition}`]}>
+        <div class="post-header-content">
+          <p class="terminal-command"><span class="prompt">$</span> cat ./index.md</p>
+          <h1>{post.data.title}</h1>
+          <p class="standfirst">{post.data.description}</p>
+          <p class="post-meta post-date">
+            Published <time datetime={post.data.published.toISOString()}>
+              {dateFormat.format(post.data.published)}
+            </time>
+            {post.data.updated && (
+              <> · Updated <time datetime={post.data.updated.toISOString()}>
+                {dateFormat.format(post.data.updated)}
+              </time></>
+            )}
+          </p>
+        </div>
+        {post.data.hero && (
+          <button
+            class="hero-image image-lightbox-trigger"
+            type="button"
+            data-lightbox-trigger
+            data-lightbox-src={heroLightbox?.src}
+            aria-label={`Open full image: ${post.data.heroAlt || post.data.title}`}
+          >
+            <Image
+              src={post.data.hero}
+              alt={post.data.heroAlt}
+              widths={[360, 540, 720, 960]}
+              sizes={post.data.heroPosition === 'right' ? '(min-width: 720px) 38vw, 100vw' : '(min-width: 720px) 70vw, 100vw'}
+              loading="eager"
+            />
+          </button>
+        )}
+      </div>
+    </header>
+    {isOlderThanYear && (
+      <aside class="age-notice" aria-label="Article age notice">
+        <span class="age-notice-prompt" aria-hidden="true">!</span>
+        <p>This article is more than a year old. Details may be out of date, and my views may have changed since it was written.</p>
+      </aside>
+    )}
+    <div class="prose">
+      <Content />
+    </div>
+  </article>
+  <dialog class="image-lightbox" data-lightbox aria-label="Image preview">
+    <button class="lightbox-close" type="button" data-lightbox-close aria-label="Close image preview">×</button>
+    <img data-lightbox-image src="" alt="" draggable="false" />
+    <div class="lightbox-controls" aria-label="Image controls">
+      <button type="button" data-lightbox-zoom-out aria-label="Zoom out">−</button>
+      <button type="button" data-lightbox-reset aria-label="Reset image zoom">1:1</button>
+      <button type="button" data-lightbox-zoom-in aria-label="Zoom in">+</button>
+    </div>
+  </dialog>
+  <script is:inline>
+    (() => {
+      const prose = document.querySelector('.prose');
+      const pullQuotes = prose
+        ? [...prose.querySelectorAll(':scope > blockquote')]
+            .map((quote) => ({ quote, paragraph: quote.previousElementSibling }))
+            .filter(({ paragraph }) => paragraph?.tagName === 'P')
+        : [];
+      const desktopLayout = window.matchMedia('(min-width: 44.01rem)');
+
+      const arrangePullQuotes = () => {
+        pullQuotes.forEach(({ quote, paragraph }) => {
+          if (!paragraph || !prose) return;
+          if (desktopLayout.matches) paragraph.before(quote);
+          else paragraph.after(quote);
+        });
+      };
+
+      arrangePullQuotes();
+      desktopLayout.addEventListener('change', arrangePullQuotes);
+
+      const dialog = document.querySelector('[data-lightbox]');
+      const preview = dialog?.querySelector('[data-lightbox-image]');
+      const close = dialog?.querySelector('[data-lightbox-close]');
+      const zoomIn = dialog?.querySelector('[data-lightbox-zoom-in]');
+      const zoomOut = dialog?.querySelector('[data-lightbox-zoom-out]');
+      const resetZoom = dialog?.querySelector('[data-lightbox-reset]');
+
+      if (!(dialog instanceof HTMLDialogElement) || !(preview instanceof HTMLImageElement)) return;
+
+      let scale = 1;
+      let offsetX = 0;
+      let offsetY = 0;
+      let pointerStartX = 0;
+      let pointerStartY = 0;
+      let startOffsetX = 0;
+      let startOffsetY = 0;
+      let dragging = false;
+
+      const updateTransform = () => {
+        preview.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+        preview.classList.toggle('is-zoomed', scale > 1);
+      };
+
+      const setZoom = (nextScale) => {
+        scale = Math.min(5, Math.max(1, nextScale));
+        if (scale === 1) {
+          offsetX = 0;
+          offsetY = 0;
+        }
+        updateTransform();
+      };
+
+      const openImage = (image, source = image.src) => {
+        preview.src = source;
+        preview.alt = image.alt;
+        setZoom(1);
+        dialog.showModal();
+      };
+
+      document.querySelectorAll('[data-lightbox-trigger]').forEach((trigger) => {
+        trigger.addEventListener('click', () => {
+          const image = trigger.querySelector('img');
+          if (image) openImage(image, trigger.dataset.lightboxSrc || image.src);
+        });
+      });
+
+      document.querySelectorAll('.prose img').forEach((image) => {
+        image.setAttribute('tabindex', '0');
+        image.setAttribute('role', 'button');
+        image.setAttribute('aria-label', `Open full image: ${image.alt || 'article image'}`);
+        image.addEventListener('click', () => openImage(image));
+        image.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            openImage(image);
+          }
+        });
+      });
+
+      close?.addEventListener('click', () => dialog.close());
+      dialog.addEventListener('click', (event) => {
+        if (event.target === dialog) dialog.close();
+      });
+      zoomIn?.addEventListener('click', () => setZoom(scale + 0.5));
+      zoomOut?.addEventListener('click', () => setZoom(scale - 0.5));
+      resetZoom?.addEventListener('click', () => setZoom(1));
+      preview.addEventListener('dblclick', () => setZoom(scale === 1 ? 2 : 1));
+      preview.addEventListener('dragstart', (event) => event.preventDefault());
+      preview.addEventListener('wheel', (event) => {
+        event.preventDefault();
+        setZoom(scale + (event.deltaY < 0 ? 0.25 : -0.25));
+      }, { passive: false });
+      preview.addEventListener('pointerdown', (event) => {
+        if (scale === 1) return;
+        dragging = true;
+        pointerStartX = event.clientX;
+        pointerStartY = event.clientY;
+        startOffsetX = offsetX;
+        startOffsetY = offsetY;
+        preview.setPointerCapture(event.pointerId);
+        preview.classList.add('is-panning');
+      });
+      preview.addEventListener('pointermove', (event) => {
+        if (!dragging) return;
+        offsetX = startOffsetX + event.clientX - pointerStartX;
+        offsetY = startOffsetY + event.clientY - pointerStartY;
+        updateTransform();
+      });
+      const stopDragging = () => {
+        dragging = false;
+        preview.classList.remove('is-panning');
+      };
+      preview.addEventListener('pointerup', stopDragging);
+      preview.addEventListener('pointercancel', stopDragging);
+      dialog.addEventListener('close', () => setZoom(1));
+    })();
+  </script>
+</BaseLayout>

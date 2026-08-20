@@ -2,7 +2,7 @@
 
 backend:
   name: github
-  repo: YOUR_GITHUB_USERNAME/personal-blog
+  repo: samtate/personal-blog
   branch: main
   auth_methods: [token]
 

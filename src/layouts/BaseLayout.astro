@@ -65,6 +65,11 @@ const jsonLd = structuredData ?? defaultStructuredData;
     {jsonLd && (
       <script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />
     )}
+    <script
+      data-goatcounter="https://stats.sa.mtate.me.uk/count"
+      async
+      src="https://stats.sa.mtate.me.uk/count.js"
+    ></script>
     <title>{pageTitle}</title>
     <script is:inline>
       (() => {
@@ -99,7 +104,7 @@ const jsonLd = structuredData ?? defaultStructuredData;
       <slot />
     </main>
     <footer class="site-footer">
-      <p>Built with Astro. No tracking.</p>
+      <p>Built with Astro. Privacy-friendly analytics.</p>
       <a href="#main">Back to top ↑</a>
     </footer>
     <script is:inline>

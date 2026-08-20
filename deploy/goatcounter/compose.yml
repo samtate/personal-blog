@@ -1,0 +1,10 @@
+services:
+  goatcounter:
+    image: arp242/goatcounter:2.7.0
+    container_name: personal-blog-goatcounter
+    restart: unless-stopped
+    network_mode: bridge
+    ports:
+      - "8090:8080"
+    volumes:
+      - ./data:/home/goatcounter/goatcounter-data

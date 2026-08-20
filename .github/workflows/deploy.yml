@@ -65,6 +65,10 @@ jobs:
           test -n "$DEPLOY_PATH"
           test "$DEPLOY_PATH" != "/"
 
+      - name: Inspect deployment host key
+        run: |
+          ssh-keyscan -T 10 -p "$DEPLOY_PORT" "$DEPLOY_HOST" 2>/dev/null | ssh-keygen -lf - || true
+
       - name: Deploy generated files
         run: |
           port="${DEPLOY_PORT:-22}"

@@ -5,14 +5,35 @@ import '../styles/global.css';
 interface Props {
   title?: string;
   description?: string;
+  socialImage?: string;
+  pageType?: 'website' | 'article';
+  publishedTime?: string;
+  modifiedTime?: string;
+  structuredData?: Record<string, unknown>;
 }
 
 const {
   title = SITE_TITLE,
   description = SITE_DESCRIPTION,
+  socialImage,
+  pageType = 'website',
+  publishedTime,
+  modifiedTime,
+  structuredData,
 } = Astro.props;
 const pageTitle = title === SITE_TITLE ? title : `${title} · ${SITE_TITLE}`;
 const canonical = new URL(Astro.url.pathname, Astro.site);
+const socialImageUrl = new URL(socialImage ?? '/favicon.svg', Astro.site);
+const defaultStructuredData = title === SITE_TITLE
+  ? {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: SITE_TITLE,
+      description: SITE_DESCRIPTION,
+      url: canonical.origin,
+    }
+  : undefined;
+const jsonLd = structuredData ?? defaultStructuredData;
 ---
 
 <!doctype html>
@@ -22,8 +43,28 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
     <meta name="description" content={description} />
+    <meta name="theme-color" content="#0d0d0e" />
     <link rel="canonical" href={canonical} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta property="og:type" content={pageType} />
+    <meta property="og:site_name" content={SITE_TITLE} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={socialImageUrl} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImageUrl} />
+    {pageType === 'article' && publishedTime && (
+      <meta property="article:published_time" content={publishedTime} />
+    )}
+    {pageType === 'article' && modifiedTime && (
+      <meta property="article:modified_time" content={modifiedTime} />
+    )}
+    {jsonLd && (
+      <script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />
+    )}
     <title>{pageTitle}</title>
     <script is:inline>
       (() => {
@@ -62,6 +103,23 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
       <a href="#main">Back to top ↑</a>
     </footer>
     <script is:inline>
+      const prefetched = new Set();
+      const prefetchPage = (anchor) => {
+        if (!(anchor instanceof HTMLAnchorElement)) return;
+        const url = new URL(anchor.href);
+        if (url.origin !== window.location.origin || url.pathname === window.location.pathname) return;
+        if (prefetched.has(url.href)) return;
+        prefetched.add(url.href);
+        const hint = document.createElement('link');
+        hint.rel = 'prefetch';
+        hint.href = url.href;
+        document.head.appendChild(hint);
+      };
+      document.querySelectorAll('a[href]').forEach((anchor) => {
+        anchor.addEventListener('pointerenter', () => prefetchPage(anchor), { once: true });
+        anchor.addEventListener('focus', () => prefetchPage(anchor), { once: true });
+      });
+
       const toggle = document.querySelector('.theme-toggle');
       const label = toggle?.querySelector('[data-theme-label]');
 

@@ -34,9 +34,35 @@ const dateFormat = new Intl.DateTimeFormat('en-GB', {
 const oneYearAgo = new Date();
 oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 const isOlderThanYear = post.data.published < oneYearAgo;
+const canonical = new URL(`/posts/${slug}/`, Astro.site).toString();
+const publishedTime = post.data.published.toISOString();
+const modifiedTime = (post.data.updated ?? post.data.published).toISOString();
+const socialImage = heroLightbox?.src;
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  headline: post.data.title,
+  description: post.data.description,
+  url: canonical,
+  mainEntityOfPage: { '@type': 'WebPage', '@id': canonical },
+  datePublished: publishedTime,
+  dateModified: modifiedTime,
+  author: { '@type': 'Person', name: 'Sam Tate' },
+  publisher: { '@type': 'Person', name: 'Sam Tate' },
+  ...(socialImage ? { image: new URL(socialImage, Astro.site).toString() } : {}),
+  ...(post.data.tags.length ? { keywords: post.data.tags.join(', ') } : {}),
+};
 ---
 
-<BaseLayout title={post.data.title} description={post.data.description}>
+<BaseLayout
+  title={post.data.title}
+  description={post.data.description}
+  pageType="article"
+  publishedTime={publishedTime}
+  modifiedTime={post.data.updated ? modifiedTime : undefined}
+  socialImage={socialImage}
+  structuredData={structuredData}
+>
   <article class="post">
     <header class="post-header post-terminal">
       <div class="window-bar" aria-hidden="true">

@@ -23,6 +23,7 @@ jobs:
       DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
       DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
       DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      DEPLOY_HOST_ED25519_SHA256: SHA256:CPpDJF7szLXVJJ15Qzakr0llRD8HBcGoHFqlzPti9Qg
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -47,23 +48,26 @@ jobs:
           tags: tag:ci
           ping: 100.70.142.113
 
-      - name: Configure deployment SSH key
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
-        run: |
-          install -m 700 -d ~/.ssh
-          install -m 600 /dev/null ~/.ssh/id_ed25519
-          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
-          install -m 600 /dev/null ~/.ssh/known_hosts
-          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
-
       - name: Validate deployment target
         run: |
           test -n "$DEPLOY_HOST"
           test -n "$DEPLOY_USER"
           test -n "$DEPLOY_PATH"
           test "$DEPLOY_PATH" != "/"
+
+      - name: Configure deployment SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          install -m 600 /dev/null ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          scan_path="$(mktemp)"
+          trap 'rm -f "$scan_path"' EXIT
+          ssh-keyscan -T 10 -p "$DEPLOY_PORT" -t ed25519 "$DEPLOY_HOST" > "$scan_path" 2>/dev/null
+          actual_fingerprint="$(ssh-keygen -lf "$scan_path" -E sha256 | awk '{print $2; exit}')"
+          test "$actual_fingerprint" = "$DEPLOY_HOST_ED25519_SHA256"
+          install -m 600 "$scan_path" ~/.ssh/known_hosts
 
       - name: Deploy generated files
         run: |

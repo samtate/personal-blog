@@ -62,12 +62,10 @@ It also needs these repository or production-environment secrets:
 - `DEPLOY_USER`: restricted deployment account
 - `DEPLOY_PATH`: absolute directory served by the web server; never `/`
 - `SSH_PRIVATE_KEY`: private key dedicated to this deployment
-- `SSH_KNOWN_HOSTS`: pinned `known_hosts` entry for the home server
 
 The deployment uses `rsync --delete`, so the deployment account should be
-restricted to a dedicated website directory. Generate `SSH_KNOWN_HOSTS` from a
-trusted network and compare its fingerprint with the server before adding it to
-GitHub.
+restricted to a dedicated website directory. The workflow verifies the NAS's
+ED25519 host-key fingerprint before adding it to the runner's `known_hosts`.
 
 The NAS Caddy service is defined in `deploy/caddy/`. Copy that directory's
 `Caddyfile` and `compose.yml` into `/volume1/docker-nfs/samtatemeuk/`, alongside

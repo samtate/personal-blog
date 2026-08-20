@@ -55,6 +55,7 @@ The deployment workflow needs one repository variable:
 
 It also needs these repository or production-environment secrets:
 
+- `TS_AUTHKEY`: an ephemeral, pre-authorized Tailscale auth key for GitHub Actions
 - `DEPLOY_HOST`: server hostname or IP
 - `DEPLOY_PORT`: SSH port; optional, defaults to `22`
 - `DEPLOY_USER`: restricted deployment account
@@ -66,6 +67,17 @@ The deployment uses `rsync --delete`, so the deployment account should be
 restricted to a dedicated website directory. Generate `SSH_KNOWN_HOSTS` from a
 trusted network and compare its fingerprint with the server before adding it to
 GitHub.
+
+The NAS Caddy service is defined in `deploy/caddy/`. Copy that directory's
+`Caddyfile` and `compose.yml` into `/volume1/docker-nfs/samtatemeuk/`, alongside
+the `site/`, `caddy-data/`, and `caddy-config/` directories, then start it with
+`docker compose up -d`. The deployment path should be
+`/volume1/docker-nfs/samtatemeuk/site`.
+
+The NAS already owns ports 80/443 with its built-in nginx, so this Caddy
+container listens on NAS port 8080. Add a NAS reverse-proxy rule for
+`sa.mtate.me.uk` from HTTPS to `http://127.0.0.1:8080`; Caddy serves the
+static files behind that proxy.
 
 For a public repository, keep using GitHub-hosted runners. Do not attach a
 general-purpose self-hosted runner on the home network.

@@ -1,0 +1,5 @@
+http://sa.mtate.me.uk {
+	root * /srv
+	encode zstd gzip
+	file_server
+}

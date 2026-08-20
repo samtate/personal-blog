@@ -38,6 +38,12 @@ jobs:
       - name: Build static site
         run: npm run build
 
+      - name: Join tailnet
+        uses: tailscale/github-action@v3
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+          hostname: github-actions-${{ github.run_id }}
+
       - name: Configure deployment SSH key
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}

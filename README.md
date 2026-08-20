@@ -55,7 +55,8 @@ The deployment workflow needs one repository variable:
 
 It also needs these repository or production-environment secrets:
 
-- `TS_AUTHKEY`: an ephemeral, pre-authorized Tailscale auth key for GitHub Actions
+- `TS_OAUTH_CLIENT_ID`: Tailscale OAuth client ID with permission to create tagged auth keys
+- `TS_OAUTH_SECRET`: Tailscale OAuth client secret
 - `DEPLOY_HOST`: server hostname or IP
 - `DEPLOY_PORT`: SSH port; optional, defaults to `22`
 - `DEPLOY_USER`: restricted deployment account

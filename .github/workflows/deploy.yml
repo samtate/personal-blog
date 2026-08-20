@@ -54,7 +54,7 @@ jobs:
           test -n "$DEPLOY_HOST"
           test -n "$DEPLOY_USER"
           test -n "$DEPLOY_PATH"
-          test "$DEPLOY_PATH" != "/"
+          test "$DEPLOY_PATH" = "/volume1/docker-nfs/samtatemeuk/site"
 
       - name: Configure deployment SSH key
         env:
@@ -74,7 +74,24 @@ jobs:
 
       - name: Deploy generated files
         run: |
+          set -euo pipefail
           port="${DEPLOY_PORT:-22}"
-          rsync -az --delete --delay-updates \
-            -e "ssh -i $HOME/.ssh/id_ed25519 -o IdentitiesOnly=yes -p $port -o UserKnownHostsFile=$HOME/.ssh/known_hosts -o StrictHostKeyChecking=yes" \
-            dist/ "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
+          printf -v target_path '%q' "$DEPLOY_PATH"
+          remote_command="$(printf '%s\n' \
+            'set -eu' \
+            "target=$target_path" \
+            'stage=/tmp/personal-blog-deploy' \
+            'rm -rf -- "$stage"' \
+            'mkdir -p -- "$stage" "$target"' \
+            'tar -xzf - -C "$stage"' \
+            'find "$target" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} \;' \
+            'cp -a "$stage"/. "$target"/' \
+            'rm -rf -- "$stage"')"
+          tar -C dist -czf - . | ssh \
+            -i "$HOME/.ssh/id_ed25519" \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -p "$port" \
+            -o "UserKnownHostsFile=$HOME/.ssh/known_hosts" \
+            -o StrictHostKeyChecking=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" "$remote_command"
